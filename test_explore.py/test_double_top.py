@@ -17,9 +17,35 @@ data = data[['open', 'high',
 # print(data[data['date']==pd.Timestamp(2024,8,8)])
 data = data[data['date']>pd.Timestamp(2024,8,15,12,0,0)]
 # window=15
-bottom_node = data[data['low']== data['low'].rolling(window=9,center=True).min()]
-top_node = data[data['high']== data['high'].rolling(window=9,center=True).max()]
-print(bottom_node)
+bottom_node = data[data['low']== data['low'].rolling(window=9,center= True).min()]
+# bottom_node = bottom_node[abs(bottom_node['low'].diff())>.050]
+top_node = data[data['high']== data['high'].rolling(window=9, center=True).max()]
+# top_node = top_node[abs(top_node['high'].diff())>.03]
+
+top_node['old_index'] = top_node.index
+top_node = top_node.reset_index()
+index = []
+for i in range(len(top_node)-1):
+    print("for loop")
+
+    print((abs(top_node.iloc[i]['high'] - top_node.iloc[i+1]['high']) / top_node.iloc[i]['high']),">0.05")
+    if (abs(top_node.iloc[i]['high'] - top_node.iloc[i+1]['high']) / top_node.iloc[i]['high']) < 0.0003:
+        # print((abs(top_node.iloc[i]['high'] - top_node.iloc[i+1]['high']) / top_node.iloc[i]['high']))
+        print("if condition")
+        index.append(i)
+print(len(index))
+print(len(top_node)) 
+top_node=top_node.drop(index)     
+# top_node = top_node.drop(i)
+print("after remove",len(top_node)) 
+
+print(top_node)
+# for i, row in top_node.iterrows():
+#     if abs(top_node[i] - top_node[i+1]) / top_node[i] <= 0.03:
+#         # Check if the price falls below the trough after the second peak
+#         if top_node[(i+1) + 1:].min() < prices[j]:
+#             double_tops.append((i, j, k))
+#             break
 plt.figure(figsize=(12, 6))
 # plt.plot(data['date'],data['close'], label='Close Price')
 

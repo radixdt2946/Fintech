@@ -170,7 +170,7 @@ plt.figure()
 
 support_level = stock_prices[stock_prices['low']== stock_prices['low'].rolling(window=9,center=True).min()]
 resistance_level = stock_prices[stock_prices['high']== stock_prices['high'].rolling(window=9,center=True).max()]
-print(support_level)
+# print(support_level)
 support_mean = stock_prices['low'].mean()
 resistance_mean = stock_prices['high'].mean()
 print(support_level[abs(support_level['low'].diff())>.500])
