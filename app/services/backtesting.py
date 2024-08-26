@@ -1,4 +1,5 @@
 import yfinance as yf
+import pandas as pd
 
 def simple_moving_average_strategy(data, short_window=50, long_window=200):
     """A simple moving average crossover strategy."""
@@ -26,7 +27,7 @@ def perform_backtest(strategy):
     portfolio_value = initial_investment
     returns = []
 
-    buy_signals, sell_signals = simple_moving_average_strategy(data)
+    buy_signals, sell_signals = simple_moving_average_strategy(data,short_window=50, long_window=200)
 
     investment = pd.DataFrame()
 
@@ -50,13 +51,13 @@ def perform_backtest(strategy):
 
     # print(investment)
 
-    cumulative_P/L= sum(investment['Profit/Loss'])
-
-
+    cumulative_PL= sum(investment['Profit/Loss'])
+    win_trades = sum(investment['Profit/Loss']>0)
+    loss_trades = sum(investment['Profit/Loss']<0)
     result = {        
-        'P/L': cumulative_P/L,
-        'winning_trades': 0,
-        'losing_trades': 0,
+        'P/L': cumulative_PL,
+        'winning_trades': win_trades,
+        'losing_trades': loss_trades,
         'average_rr': 0,
     }
 
