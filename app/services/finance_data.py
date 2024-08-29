@@ -3,42 +3,36 @@ from app.models import StockData
 import pandas as pd
 
 def get_financial_data(symbol):
-    ticker = yf.Ticker(symbol)   
-    print("hello") 
-    data = {        
-        'price': ticker.history(period="1d").to_dict(),
-        'financials': ticker.financials.to_dict(),
-        'balance_sheet': ticker.balance_sheet.to_dict(),
-        'cashflow': ticker.cashflow.to_dict(),
-        # Add more segmented data as needed
-    }
-    [StockData(**item).model_dump() for item in data['price']]
-    return data
+    '''
+        Fetch financial data from Yahoo Finance API.
 
-    # try:
+        This function retrieves 1-day period stock data, along with financial statements, 
+        balance sheet, and cash flow data for a specific stock symbol.
+    '''
 
-    #     data = pd.read_json("/home/nishant.barevadiya/Work/flask-fintech/response_1.json")
-    #     data = data.reset_index()
-    #     data = data[['Open', 'High',
-    #                  'Low', 'Close', 'Volume', 'date']]
-    #     data['symbol'] = symbol
-    #     data.columns = data.columns.str.lower()
-    #     data = data.to_dict('records')
-    #     return [StockData(**item).model_dump() for item in data]
+    try:
+
+        ticker = yf.Ticker(symbol)   
+        
+        # it check that given ticker symbol is valid or not
+        info = ticker.info
+        if not info and 'regularMarketPrice' in info:
+            return {"error":f'{symbol} is not a valid ticker symbol.',}
+        
 
 
-
-    #     period= '1d'
-    #     interval = '1m'
-    #     data = yf.download(symbol, period=period, interval=interval)
-    #     data = data.reset_index()
-    #     data['date'] = data['Datetime'].dt.strftime('%Y-%m-%d')
-    #     data = data[['Open', 'High',
-    #                  'Low', 'Close', 'Volume', 'date']]
-    #     data['symbol'] = symbol
-    #     data.columns = data.columns.str.lower()
-    #     data = data.to_dict('records')
-    #     return [StockData(**item).model_dump() for item in data]
-    # except Exception as e:
-    #     print(f"Error fetching data: {e}")
-    #     return []
+        stock_data = ticker.history(period='1d')
+    
+        data = {        
+            'price': stock_data.reset_index().to_dict(),
+            'financials': ticker.financials.T.reset_index().to_dict(),
+            'balance_sheet': ticker.balance_sheet.T.reset_index().to_dict(),
+            'cashflow': ticker.cashflow.T.reset_index().to_dict(),
+        }
+        
+        return data
+    
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+        return {"error": str(e)}
+        
