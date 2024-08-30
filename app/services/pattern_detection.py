@@ -7,10 +7,10 @@ import numpy as np
 import os
 
 
-###############################################################
-######################### Double Top ##########################
-    
-def double_top_pattern_detection(data,similarity_threshold = 0.02):
+DEFAULT_SIMILARITY_THRESHOLD = 0.02
+
+
+def double_top_pattern_detection(data: pd.DataFrame,similarity_threshold: float) -> pd.DataFrame:
     '''
         Detect the double top pattern in stock data and return a DataFrame containing the detected patterns.
 
@@ -22,13 +22,13 @@ def double_top_pattern_detection(data,similarity_threshold = 0.02):
         similarity_threshold : float, optional
             A threshold for comparing the similarity between the two peaks. The default is 0.02 (2% similarity).
 
+        Returns:
+        --------
+        pd.DataFrame
+        A DataFrame with detected patterns.
     '''
     try:
     
-        # Identify local maxima (peaks)
-        peaks, _ = find_peaks(data['Close'], distance=10)  # distance parameter controls how Close peaks can be
-
-
         # Filter peaks with minimum prominence to ensure they are significant
         peaks, properties = find_peaks(data['Close'], prominence=1, distance=10)
 
@@ -77,7 +77,7 @@ def double_top_pattern_detection(data,similarity_threshold = 0.02):
         print(f"An error occurred: {str(e)}")
         return pd.DataFrame()
 
-def detect_patterns(strategy):
+def detect_patterns(strategy: dict) -> dict:
     '''
         Detect specific technical patterns in stock data (e.g., Double Top, Support, Resistance).
         generate a candlestick chart, and save the image. The function returns the file path of the 

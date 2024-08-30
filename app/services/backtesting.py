@@ -1,10 +1,37 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import logging
 
-def simple_moving_average_strategy(data, short_window=50, long_window=200):
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# Default constants
+DEFAULT_SHORT_WINDOW = 50
+DEFAULT_LONG_WINDOW = 200
+DEFAULT_MULTIPLIER = 2
+DEFAULT_INVESTMENT = 10000
+DEFAULT_ATR_MULTIPLIER = 2
+DEFAULT_ATR_PERIOD = 14
+
+def fetch_stock_data(symbol: str, period: str = '1y', interval: str = '1d') -> pd.DataFrame:
     """
-        A simple moving average crossover strategy.
+    Fetch stock data using yfinance.
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        data = ticker.history(period=period, interval=interval).reset_index()
+        return data.dropna(subset=['Close']) # Ensuring there are no missing 'Close' values
+    except Exception as e:
+        logger.error(f"Error fetching data for {symbol}: {e}")
+        return pd.DataFrame()
+
+
+def simple_moving_average_strategy(data : pd.DataFrame, short_window: int, long_window: int) -> (pd.Series, pd.Series):
+    """
+        Calculate moving average crossover strategy signals.
 
         Parameters:
         -----------
@@ -24,12 +51,12 @@ def simple_moving_average_strategy(data, short_window=50, long_window=200):
 
         return buy_signals, sell_signals
     except Exception as e:
-        print(f"Error in simple_moving_average_strategy: {e}")
-        return None, None
+        logger.error(f"Error in simple_moving_average_strategy: {e}")
+        return pd.Series([False]* len(data)), pd.Series([False]* len(data))
 
-def exponential_moving_average_strategy( data, short_window, long_window, multiplier):
+def exponential_moving_average_strategy( data: pd.DataFrame, short_window: int, long_window: int, multiplier: float) -> (pd.Series, pd.Series):
     '''
-        A simple exponential moving average crossover strategy.
+        Calculate exponential moving average crossover strategy signals.
 
         Parameters:
         -----------
@@ -43,9 +70,8 @@ def exponential_moving_average_strategy( data, short_window, long_window, multip
     try:
         short_multiplier = multiplier / (short_window +1)
         long_multiplier = multiplier / (long_window +1)
-        # print(multiplier)
-        data['EMA_short'] = None
-        data.loc[:short_window,'EMA_short'] = 0
+        
+        data['EMA_short'] = 0
         
         for i in range(short_window,len(data)):
         
@@ -54,11 +80,9 @@ def exponential_moving_average_strategy( data, short_window, long_window, multip
             else:
                 data.loc[i,'EMA_short'] = data.iloc[i]['Close'] * short_multiplier + data.iloc[i-1]['EMA_short'] * (1 - short_multiplier)
         
-        data['EMA_long'] = None
-        data.loc[:long_window,'EMA_long'] = 0
+        data['EMA_long'] = 0
+        
         for i in range(long_window,len(data)):
-            if i < long_window:
-                data.loc[i,'EMA_long'] = 0
             if i == long_window:
                 data.loc[i,'EMA_long'] = (data.iloc[:i]['Close'].sum())/long_window
             else:
@@ -71,10 +95,10 @@ def exponential_moving_average_strategy( data, short_window, long_window, multip
         return buy_signals, sell_signals
     
     except Exception as e:
-        print(f"Error in exponential_moving_average_strategy: {e}")
-        return None, None
+        logger.error(f"Error in exponential_moving_average_strategy: {e}")
+        return pd.Series([False] * len(data)), pd.Series([False] * len(data))
 
-def oco_ATR(data, initial_investment, buy_signals, sell_signals, atr_multiplier, atr_period):
+def oco_ATR(data: pd.DataFrame, initial_investment: float, buy_signals: pd.Series, sell_signals: pd.Series, atr_multiplier: float, atr_period: int) -> pd.DataFrame:
     
     '''
         A one-cancels-other (OCO) trading strategy based on Average True Range (ATR).
@@ -110,7 +134,6 @@ def oco_ATR(data, initial_investment, buy_signals, sell_signals, atr_multiplier,
         data['ATR'] = data['True_Range'].rolling(window=atr_period, min_periods=1).mean()
 
         atr= data['ATR']
-        # atr = talib.ATR(data['High'], data['Low'], data['Close'], timeperiod=atr_period)
         stop_loss = 0
         target = 0
         position = 0
@@ -146,10 +169,10 @@ def oco_ATR(data, initial_investment, buy_signals, sell_signals, atr_multiplier,
         return investment_report
     
     except Exception as e:
-        print(f"Error in oco_ATR: {e}")
+        logger.error(f"Error in oco_ATR: {e}")
         return pd.DataFrame()
 
-def oco_percent_point(data, initial_investment, buy_signals, risk, reward, use_percentage):
+def oco_percent_point(data: pd.DataFrame, initial_investment: float,buy_signals: pd.Series, risk: float, reward: float, use_percentage: bool) -> pd.DataFrame:
     
     '''
         A one-cancels-other (OCO) trading strategy based on fixed percentage or points.
@@ -224,10 +247,10 @@ def oco_percent_point(data, initial_investment, buy_signals, risk, reward, use_p
         return investment_report
     
     except Exception as e:
-        print(f"Error in oco_percent_point: {e}")
+        logger.error(f"Error in oco_percent_point: {e}")
         return pd.DataFrame()
 
-def perform_backtest(strategy):
+def perform_backtest(strategy: dict) -> dict:
     '''
             Perform a trading backtest based on a provided strategy object.
     '''
@@ -316,17 +339,24 @@ def perform_backtest(strategy):
                 return {"error": "Invalid OCO strategy"}
 
         else:
+            # Logic for when no OCO strategy is provided
+
             for index, row in data.iterrows():
                 if position == 0 and buy_signals[index]:
                     position = initial_investment / row['Close']
 
                 elif position > 0 and sell_signals[index]:
+
                     portfolio_value = position * row['Close']
+                    returns = portfolio_value / initial_investment - 1
+                    profit_loss = portfolio_value - initial_investment
+
+                    
                     invest_dict = {"investment": initial_investment,
                     'position' : position,
-                    'returns' : (portfolio_value / initial_investment - 1),
+                    'returns' :returns,
                     'sell_value' : portfolio_value,
-                    'Profit/Loss' : portfolio_value - initial_investment}
+                    'Profit/Loss' : profit_loss}
                     investment_report = investment_report._append(invest_dict, ignore_index = True)
                     
                     position = 0
@@ -351,7 +381,7 @@ def perform_backtest(strategy):
             average_rr = round(trades[trades < 0].mean()*-1 / trades[trades > 0].mean(),2)
 
         result = {        
-            'P/L': cumulative_PL,
+            'P&L': cumulative_PL,
             'winning_trades': win_trades,
             'losing_trades': loss_trades,
             'average_rr': average_rr,
@@ -360,5 +390,5 @@ def perform_backtest(strategy):
         return result
 
     except Exception as e:
-        print(f"Error in perform_backtest: {e}")
+        logger.error(f"Error in perform_backtest: {e}")
         return {"error": str(e)}
