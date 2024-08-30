@@ -1,9 +1,0 @@
-{
-    "symbol": "GOOG",
-    "period": "1y",
-    "timeframe": "1d",
-    "pattern_type": {
-        "type": "double_top",
-        "similarity_threshold": 0.02
-    }
-}
