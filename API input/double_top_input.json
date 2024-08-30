@@ -1,9 +1,8 @@
 {
-    "symbol":"GOOG",
-    "period":"1y",
-    "timeframe":"1d",
-    "investment":"10000",
-    "pattern_type":{
+    "symbol": "GOOG",
+    "period": "1y",
+    "timeframe": "1d",
+    "pattern_type": {
         "type": "double_top",
         "similarity_threshold": 0.02
     }

@@ -1,5 +1,7 @@
-from flask import jsonify, request
+from flask import jsonify, request, send_from_directory
 from flask.blueprints import Blueprint
+from pathlib import Path
+import os
 # from app.services import fetch_stock_data
 
 from flask import Blueprint, jsonify, request, Response
@@ -8,6 +10,7 @@ from .services.pattern_detection import detect_patterns
 from .services.backtesting import perform_backtest
 
 main = Blueprint('main', __name__)
+DIR_PATH: Path = Path(__file__).parent.parent
 
 
 @main.route('/')
@@ -32,9 +35,7 @@ def quote():
         return jsonify({'error': str(e)}), 500
 
 
-
-
-@main.route('/patterns', methods=['GET'])
+@main.route('/patterns', methods=['POST'])
 def patterns():
     
     '''
@@ -69,5 +70,9 @@ def backtest():
         return jsonify({'error': str(e)}), 500
 
 
-
-
+@main.route('/assets/<filename>')
+def my_files(filename):
+    print(DIR_PATH)
+    response = send_from_directory(f"{DIR_PATH}/assets", filename)
+    print(response)
+    return response

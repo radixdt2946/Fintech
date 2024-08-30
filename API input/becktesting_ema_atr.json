@@ -6,7 +6,8 @@
     "indicator":{
         "strategy":"ema",
         "short_window":50,
-        "long_window":200
+        "long_window":200,
+        "multiplier": 2
     },
     "oco":{
         "strategy":"atr",

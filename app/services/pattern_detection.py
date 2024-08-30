@@ -197,9 +197,10 @@ def detect_patterns(strategy):
             try:
                 # Calculate rolling min and max for support and resistance
                 window=pattern_type.get('window')
-                
+                similarity_diff = pattern_type.get('similarity_difference',0.1)
+
                 support_level = data[data['Low']== data['Low'].rolling(window=window,center=True).min()]
-                support_level = support_level[abs(support_level['Low'].diff())>.100]
+                support_level = support_level[abs(support_level['Low'].diff())>similarity_diff]
 
                 # plot support lines
                 xmax_par = support_level['Date'].shift(-1).fillna(support_level['Date'].iloc[-1])
@@ -215,10 +216,11 @@ def detect_patterns(strategy):
                 # Logic to detect resistance linepass
                 
                 window=pattern_type.get('window')
-                # similarity_threshold         
+                similarity_diff = pattern_type.get('similarity_difference',0.1)
+                
                 resistance_level = data[data['High']== data['High'].rolling(window=window,center=True).max()]
                 
-                resistance_level = resistance_level[abs(resistance_level['High'].diff())>.100]
+                resistance_level = resistance_level[abs(resistance_level['High'].diff()) > similarity_diff]
                 
                 # plot resistance lines
                 xmax_par = resistance_level['Date'].shift(-1).fillna(resistance_level['Date'].iloc[-1])

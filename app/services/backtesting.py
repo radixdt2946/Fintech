@@ -27,7 +27,7 @@ def simple_moving_average_strategy(data, short_window=50, long_window=200):
         print(f"Error in simple_moving_average_strategy: {e}")
         return None, None
 
-def exponential_moving_average_strategy( data, short_window, long_window):
+def exponential_moving_average_strategy( data, short_window, long_window, multiplier):
     '''
         A simple exponential moving average crossover strategy.
 
@@ -41,8 +41,8 @@ def exponential_moving_average_strategy( data, short_window, long_window):
             The window size for the long-term EMA.
     '''
     try:
-        short_multiplier = 2 / (short_window +1)
-        long_multiplier = 2/ (long_window +1)
+        short_multiplier = multiplier / (short_window +1)
+        long_multiplier = multiplier / (long_window +1)
         # print(multiplier)
         data['EMA_short'] = None
         data.loc[:short_window,'EMA_short'] = 0
@@ -107,7 +107,7 @@ def oco_ATR(data, initial_investment, buy_signals, sell_signals, atr_multiplier,
         data['TR1'] = abs(data['High'] - data['Close'].shift(1))
         data['TR2'] = abs(data['Low'] - data['Close'].shift(1))
         data['True_Range'] = data[['TR', 'TR1', 'TR2']].max(axis=1)
-        data['ATR'] = data['True_Range'].rolling(window=14, min_periods=1).mean()
+        data['ATR'] = data['True_Range'].rolling(window=atr_period, min_periods=1).mean()
 
         atr= data['ATR']
         # atr = talib.ATR(data['High'], data['Low'], data['Close'], timeperiod=atr_period)
@@ -180,8 +180,6 @@ def oco_percent_point(data, initial_investment, buy_signals, risk, reward, use_p
 
         investment_report = pd.DataFrame()
 
-
-        # atr = talib.ATR(data['High'], data['Low'], data['Close'], timeperiod=atr_period)
         stop_loss = 0
         target = 0
         position = 0
@@ -214,7 +212,7 @@ def oco_percent_point(data, initial_investment, buy_signals, risk, reward, use_p
                     'sell_value' : portfolio_value,
                     'Profit/Loss' : portfolio_value - initial_investment,
                     'risk' : risk,
-                    'top_loss': stop_loss,
+                    'stop_loss': stop_loss,
                     'target' : target,
                     'entry_price': entry_price,
                     'exit_price': exit_price,
@@ -276,15 +274,16 @@ def perform_backtest(strategy):
 
         
         if indicator:
+            short_window = indicator.get('short_window',50)
+            long_window = indicator.get('long_window',200)
+            
             if str(indicator.get('strategy')).lower() == 'sma':
-                short_window = indicator.get('short_window',50)
-                long_window = indicator.get('long_window',200)
                 buy_signals, sell_signals = simple_moving_average_strategy(data,short_window=short_window, long_window=long_window)
 
-            elif str(indicator.get('strategy')).lower() == "ema":
-                short_window = indicator.get('short_window',50)
-                long_window = indicator.get('long_window',200)
-                buy_signals, sell_signals = exponential_moving_average_strategy(data,short_window=short_window, long_window=long_window)
+            elif str(indicator.get('strategy')).lower() == "ema":    
+                multiplier = indicator.get('multiplier', 2)
+                buy_signals, sell_signals = exponential_moving_average_strategy(data,short_window=short_window, long_window=long_window, multiplier=multiplier)
+
             else:
                 return  {"error":"Invalid indicators"}
 
@@ -295,8 +294,8 @@ def perform_backtest(strategy):
 
                 atr_multiplier = oco.get('atr_multiplier',2)
                 atr_period = oco.get('atr_period',14)
-                
-                investment_report = oco_ATR(data, initial_investment, buy_signals, sell_signals, atr_multiplier, atr_period )
+
+                investment_report = oco_ATR(data, initial_investment, buy_signals, sell_signals, atr_multiplier, atr_period)
             elif oco_strategy.lower() == 'percent':
 
                 # Set Stop Loss and Take Profit using fixed percentage or points
@@ -304,7 +303,7 @@ def perform_backtest(strategy):
                 percent_reward = oco.get('percent_reward',5)
                 
                 investment_report = oco_percent_point( data, initial_investment, buy_signals, percent_risk, percent_reward, use_percentage= True)
-            
+    
             elif oco_strategy.lower() == 'point':
 
                 # Set Stop Loss and Take Profit using fixed percentage or points
@@ -312,6 +311,7 @@ def perform_backtest(strategy):
                 point_reward = oco.get('point_reward',10)
 
                 investment_report = oco_percent_point( data, initial_investment, buy_signals, point_risk, point_reward, use_percentage= False)
+
             else:
                 return {"error": "Invalid OCO strategy"}
 
@@ -338,7 +338,8 @@ def perform_backtest(strategy):
 
         average_rr =  0 
         if oco:
-            investment_report['reward']=  investment_report['target'] - investment_report['entry_price']
+            
+            investment_report['reward']=  (investment_report['target'] - investment_report['entry_price'])
             investment_report['RR_ratio'] = investment_report['reward'] / investment_report['risk']
             
             # Drop rows where RR_ratio is None (invalid trades)
